@@ -89,7 +89,7 @@ export function generateSignal() {
 
   const { action, confidence } = analyzePattern(pair);
 
-  if (confidence < 85) {
+  if (confidence < 90) {
     return generateSignal();
   }
 
