@@ -1,5 +1,5 @@
 import { TradingSignal } from '../lib/types';
-import { TrendingUp, TrendingDown, Target, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Clock, Gauge } from 'lucide-react';
 
 interface SignalCardProps {
   signal: TradingSignal;
@@ -10,70 +10,72 @@ export default function SignalCard({ signal }: SignalCardProps) {
     const date = new Date(isoString);
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes} EAT`;
+    return `${hours}:${minutes}`;
   };
 
   const isBuy = signal.action === 'BUY';
 
   return (
-    <div className={`rounded-lg p-6 shadow-lg border-2 ${
+    <div className={`rounded-xl overflow-hidden shadow-md border transition-all hover:shadow-lg hover:scale-105 ${
       isBuy
-        ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-400'
-        : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-400'
+        ? 'bg-white border-emerald-200'
+        : 'bg-white border-red-200'
     }`}>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 font-medium text-sm">📊 Pair:</span>
-          <span className="text-2xl font-bold text-gray-800">{signal.pair}</span>
-        </div>
+      <div className={`h-2 ${isBuy ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-red-600'}`}></div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-gray-600 font-medium text-sm">Action:</span>
-          <div className="flex items-center gap-2">
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 mb-1">{signal.session} Session</p>
+            <p className="text-3xl font-bold text-slate-900">{signal.pair}</p>
+          </div>
+          <div className={`p-3 rounded-lg ${isBuy ? 'bg-emerald-100' : 'bg-red-100'}`}>
             {isBuy ? (
-              <TrendingUp className="w-5 h-5 text-green-600" />
+              <TrendingUp className={`w-6 h-6 ${isBuy ? 'text-emerald-600' : 'text-red-600'}`} />
             ) : (
-              <TrendingDown className="w-5 h-5 text-red-600" />
+              <TrendingDown className={`w-6 h-6 ${isBuy ? 'text-emerald-600' : 'text-red-600'}`} />
             )}
-            <span className={`text-xl font-bold ${
-              isBuy ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {signal.action}/{isBuy ? 'CALL' : 'PUT'} {isBuy ? '📈' : '📉'}
-            </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-orange-500" />
-            <span className="text-gray-600 font-medium text-sm">🎯 Confidence:</span>
-          </div>
-          <span className="text-xl font-bold text-orange-600">{signal.confidence}% 🔥</span>
-        </div>
-
-        <div className="pt-3 border-t border-gray-200 space-y-2">
-          <div className="flex items-center justify-between">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <span className="text-xs font-semibold text-slate-600">Signal</span>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-500" />
-              <span className="text-gray-600 font-medium text-sm">⏰ Start Time:</span>
+              <span className={`text-lg font-bold ${isBuy ? 'text-emerald-600' : 'text-red-600'}`}>
+                {signal.action}
+              </span>
+              <span className={`px-2 py-1 rounded text-xs font-semibold ${isBuy ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {isBuy ? 'CALL' : 'PUT'}
+              </span>
             </div>
-            <span className="text-lg font-semibold text-blue-600">
-              {formatTime(signal.start_time)}
-            </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 font-medium text-sm pl-6">🏁 End Time:</span>
-            <span className="text-lg font-semibold text-purple-600">
-              {formatTime(signal.end_time)}
-            </span>
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Gauge className="w-4 h-4 text-slate-600" />
+              <span className="text-xs font-semibold text-slate-600">Confidence</span>
+            </div>
+            <span className="text-lg font-bold text-slate-900">{signal.confidence}%</span>
           </div>
-        </div>
 
-        <div className="pt-2">
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
-            {signal.session} Session
-          </span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <div className="flex items-center gap-1 mb-2">
+                <Clock className="w-4 h-4 text-slate-600" />
+                <p className="text-xs font-semibold text-slate-600">Start</p>
+              </div>
+              <p className="text-lg font-bold text-slate-900">{formatTime(signal.start_time)}</p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <div className="flex items-center gap-1 mb-2">
+                <Target className="w-4 h-4 text-slate-600" />
+                <p className="text-xs font-semibold text-slate-600">End</p>
+              </div>
+              <p className="text-lg font-bold text-slate-900">{formatTime(signal.end_time)}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

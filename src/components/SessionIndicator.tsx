@@ -9,33 +9,38 @@ export default function SessionIndicator({ session }: SessionIndicatorProps) {
   const getSessionColor = (name: string) => {
     switch (name) {
       case 'Asian':
-        return 'from-yellow-500 to-orange-500';
+        return 'from-amber-500 to-orange-600';
       case 'London':
-        return 'from-blue-500 to-indigo-500';
+        return 'from-blue-600 to-blue-700';
       case 'New York':
-        return 'from-green-500 to-emerald-500';
+        return 'from-emerald-600 to-emerald-700';
       default:
-        return 'from-gray-500 to-gray-600';
+        return 'from-slate-600 to-slate-700';
     }
   };
 
   return (
-    <div className={`rounded-lg p-4 bg-gradient-to-r ${getSessionColor(session.name)} text-white shadow-lg`}>
-      <div className="flex items-center gap-3">
-        <Globe className="w-6 h-6" />
-        <div>
-          <p className="text-sm font-medium opacity-90">Active Session</p>
-          <p className="text-xl font-bold">{session.name}</p>
+    <div className={`rounded-xl p-6 bg-gradient-to-br ${getSessionColor(session.name)} text-white shadow-lg border border-white/10`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <Globe className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold opacity-90">Market Session</p>
+            <p className="text-2xl font-bold">{session.name}</p>
+          </div>
         </div>
-        <div className="ml-auto">
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+        <div className="flex items-center justify-center">
+          <div className="w-4 h-4 bg-white rounded-full animate-pulse"></div>
         </div>
       </div>
-      <div className="mt-3 pt-3 border-t border-white/20">
-        <p className="text-xs font-medium opacity-75 mb-1">Active Pairs:</p>
-        <div className="flex flex-wrap gap-1">
+
+      <div className="pt-4 border-t border-white/20">
+        <p className="text-xs font-semibold opacity-75 mb-3">Trading Pairs</p>
+        <div className="flex flex-wrap gap-2">
           {session.pairs.map((pair) => (
-            <span key={pair} className="text-xs px-2 py-1 bg-white/20 rounded">
+            <span key={pair} className="px-3 py-2 bg-white/15 hover:bg-white/25 rounded-lg text-xs font-semibold transition-colors">
               {pair}
             </span>
           ))}

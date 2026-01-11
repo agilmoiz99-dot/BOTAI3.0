@@ -4,7 +4,7 @@ import { TradingSignal } from '../lib/types';
 import { generateSignal, getCurrentSession, getTimeUntilNextInterval } from '../lib/signalGenerator';
 import SignalCard from './SignalCard';
 import SessionIndicator from './SessionIndicator';
-import { Play, Pause, Trash2, Activity, TrendingUp } from 'lucide-react';
+import { Play, Pause, Trash2, Activity, TrendingUp, Zap, History, Settings } from 'lucide-react';
 
 export default function Dashboard() {
   const [signals, setSignals] = useState<TradingSignal[]>([]);
@@ -148,52 +148,56 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Activity className="w-10 h-10 text-emerald-400" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              AI Trading Bot
-            </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-5xl font-bold text-slate-900">Trading Signals</h1>
           </div>
-          <p className="text-slate-400 text-sm">M5 Binary Options Signal Generator</p>
+          <p className="text-slate-500 ml-12 text-lg">AI-powered M5 binary options signal generator</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+          <div className="lg:col-span-3">
             <SessionIndicator session={session} />
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 shadow-lg border border-slate-700">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-slate-400">Mode</span>
-              <button
-                onClick={toggleMode}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                  isAutoMode
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'bg-slate-700 hover:bg-slate-600'
-                }`}
-              >
-                {isAutoMode ? (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    Auto
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    Manual
-                  </>
-                )}
-              </button>
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-slate-600" />
+                <span className="text-sm font-semibold text-slate-700">Operation Mode</span>
+              </div>
             </div>
 
+            <button
+              onClick={toggleMode}
+              className={`w-full px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 mb-4 ${
+                isAutoMode
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg'
+                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+              }`}
+            >
+              {isAutoMode ? (
+                <>
+                  <Pause className="w-4 h-4" />
+                  Auto Mode Active
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  Manual Mode
+                </>
+              )}
+            </button>
+
             {isAutoMode && nextSignalIn && (
-              <div className="bg-slate-900 rounded p-3 mb-3">
-                <p className="text-xs text-slate-400 mb-1">Next Signal In:</p>
-                <p className="text-2xl font-bold text-emerald-400">{nextSignalIn}</p>
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 mb-4 border border-blue-200">
+                <p className="text-xs font-semibold text-slate-600 mb-2">Next Signal In</p>
+                <p className="text-3xl font-bold text-blue-600">{nextSignalIn}</p>
               </div>
             )}
 
@@ -201,7 +205,7 @@ export default function Dashboard() {
               <button
                 onClick={generateAndSaveSignal}
                 disabled={isGenerating}
-                className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 disabled:from-slate-700 disabled:to-slate-700 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-slate-300 disabled:to-slate-300 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-white shadow-lg"
               >
                 <TrendingUp className="w-5 h-5" />
                 {isGenerating ? 'Analyzing...' : 'Generate Signal'}
@@ -210,7 +214,7 @@ export default function Dashboard() {
 
             <button
               onClick={clearHistory}
-              className="w-full mt-3 bg-red-900/30 hover:bg-red-900/50 border border-red-800 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+              className="w-full mt-3 bg-red-50 hover:bg-red-100 border border-red-200 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-red-600"
             >
               <Trash2 className="w-4 h-4" />
               Clear History
@@ -219,24 +223,31 @@ export default function Dashboard() {
         </div>
 
         {currentSignal && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
-              Active Signal
-            </h2>
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                <h2 className="text-2xl font-bold text-slate-900">Active Signal</h2>
+              </div>
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">LIVE</span>
+            </div>
             <SignalCard signal={currentSignal} />
           </div>
         )}
 
         <div>
-          <h2 className="text-2xl font-bold mb-4">Signal History</h2>
+          <div className="flex items-center gap-3 mb-5">
+            <History className="w-6 h-6 text-slate-900" />
+            <h2 className="text-2xl font-bold text-slate-900">Signal History</h2>
+          </div>
           {signals.length === 0 ? (
-            <div className="bg-slate-800 rounded-lg p-12 text-center border border-slate-700">
-              <Activity className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">No signals yet. Generate your first signal!</p>
+            <div className="bg-white rounded-xl p-16 text-center border border-slate-200 shadow-sm">
+              <Activity className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 text-lg">No signals generated yet</p>
+              <p className="text-slate-400 text-sm mt-2">Start generating signals to see the history here</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {signals.map((signal) => (
                 <SignalCard key={signal.id} signal={signal} />
               ))}
