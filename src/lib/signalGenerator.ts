@@ -172,6 +172,55 @@ function calculateMovingAverages(prices: PriceData[]): { sma20: number; sma50: n
   return { sma20, sma50, ema9 };
 }
 
+function calculateStochastic(prices: PriceData[], period: number = 14): { k: number; d: number } {
+  const recent = prices.slice(-period);
+  let high = recent[0].high, low = recent[0].low;
+
+  for (let i = 1; i < recent.length; i++) {
+    if (recent[i].high > high) high = recent[i].high;
+    if (recent[i].low < low) low = recent[i].low;
+  }
+
+  const current = recent[recent.length - 1].close;
+  const k = high === low ? 50 : ((current - low) / (high - low)) * 100;
+  const d = (k + (prices.length > 1 ? k : 0) + (prices.length > 2 ? k : 0)) / 3;
+
+  return { k, d };
+}
+
+function calculateBollingerBands(prices: PriceData[], period: number = 20): { upper: number; middle: number; lower: number } {
+  const closes = prices.map(p => p.close);
+  const lastCloses = closes.slice(-period);
+
+  const middle = lastCloses.reduce((a, b) => a + b) / period;
+  const variance = lastCloses.reduce((sum, val) => sum + Math.pow(val - middle, 2), 0) / period;
+  const stdDev = Math.sqrt(variance);
+
+  return {
+    upper: middle + (stdDev * 2),
+    middle,
+    lower: middle - (stdDev * 2)
+  };
+}
+
+function calculateATR(prices: PriceData[], period: number = 14): number {
+  let sum = 0, count = 0;
+
+  for (let i = Math.max(1, prices.length - period); i < prices.length; i++) {
+    const current = prices[i];
+    const previous = prices[i - 1];
+
+    const tr1 = current.high - current.low;
+    const tr2 = Math.abs(current.high - previous.close);
+    const tr3 = Math.abs(current.low - previous.close);
+
+    sum += Math.max(tr1, tr2, tr3);
+    count++;
+  }
+
+  return count > 0 ? sum / count : 0;
+}
+
 function detectSupportResistance(prices: PriceData[]): { support: number; resistance: number } {
   const highs = prices.map(p => p.high);
   const lows = prices.map(p => p.low);
@@ -230,6 +279,9 @@ export function analyzePattern(pair: string): { action: 'BUY' | 'SELL'; confiden
   const rsi = calculateRSI(priceHistory);
   const { macd, signal, histogram } = calculateMACD(priceHistory);
   const { sma20, sma50, ema9 } = calculateMovingAverages(priceHistory);
+  const { k: stoch_k, d: stoch_d } = calculateStochastic(priceHistory);
+  const { upper, middle, lower } = calculateBollingerBands(priceHistory);
+  const atr = calculateATR(priceHistory);
   const { support, resistance } = detectSupportResistance(priceHistory);
 
   const currentPrice = priceHistory[priceHistory.length - 1].close;
@@ -240,49 +292,68 @@ export function analyzePattern(pair: string): { action: 'BUY' | 'SELL'; confiden
   let bearishSignals = 0;
   let totalSignals = 0;
 
-  if (rsi < 30) {
-    bullishSignals++;
-  } else if (rsi > 70) {
-    bearishSignals++;
-  }
+  if (rsi < 30) bullishSignals++;
+  else if (rsi > 70) bearishSignals++;
   totalSignals++;
 
-  if (histogram > 0 && macd > signal) {
-    bullishSignals++;
-  } else if (histogram < 0 && macd < signal) {
-    bearishSignals++;
-  }
+  if (histogram > 0 && macd > signal) bullishSignals++;
+  else if (histogram < 0 && macd < signal) bearishSignals++;
   totalSignals++;
 
-  if (currentPrice > sma20 && sma20 > sma50) {
-    bullishSignals++;
-  } else if (currentPrice < sma20 && sma20 < sma50) {
-    bearishSignals++;
-  }
+  if (currentPrice > sma20 && sma20 > sma50) bullishSignals++;
+  else if (currentPrice < sma20 && sma20 < sma50) bearishSignals++;
   totalSignals++;
 
-  if (currentPrice > ema9) {
-    bullishSignals++;
-  } else if (currentPrice < ema9) {
-    bearishSignals++;
-  }
+  if (currentPrice > ema9) bullishSignals++;
+  else if (currentPrice < ema9) bearishSignals++;
   totalSignals++;
 
-  if (trend === 'bullish' && currentPrice > support) {
-    bullishSignals++;
-  } else if (trend === 'bearish' && currentPrice < resistance) {
-    bearishSignals++;
-  }
+  if (trend === 'bullish' && currentPrice > support) bullishSignals++;
+  else if (trend === 'bearish' && currentPrice < resistance) bearishSignals++;
   totalSignals++;
+
+  if (stoch_k < 20) bullishSignals++;
+  else if (stoch_k > 80) bearishSignals++;
+  if (stoch_k > stoch_d) bullishSignals += 0.5;
+  else bearishSignals += 0.5;
+  totalSignals += 1.5;
+
+  if (currentPrice < lower) bullishSignals++;
+  else if (currentPrice > upper) bearishSignals++;
+  if (currentPrice > middle) bullishSignals += 0.5;
+  else bearishSignals += 0.5;
+  totalSignals += 1.5;
+
+  const recentHigh = Math.max(...priceHistory.slice(-5).map(p => p.high));
+  const recentLow = Math.min(...priceHistory.slice(-5).map(p => p.low));
+  const volatility = recentHigh - recentLow;
+
+  if (atr > volatility * 0.5) bullishSignals += 0.3;
+  else bearishSignals += 0.3;
+  totalSignals += 0.3;
 
   const bullishPercentage = (bullishSignals / totalSignals) * 100;
   const action = bullishSignals > bearishSignals ? 'BUY' : 'SELL';
 
   const confirmationStrength = Math.abs(bullishSignals - bearishSignals);
   const baseConfidence = bullishPercentage;
-  const confidence = Math.round(baseConfidence * (confirmationStrength / totalSignals) * 1.5);
+  const confidence = Math.round(baseConfidence * (confirmationStrength / totalSignals) * 1.8);
 
   return { action, confidence: Math.min(99, confidence) };
+}
+
+function analyzeMultiTimeframe(pair: string): number {
+  const shortTerm = simulator.getPriceHistory(pair, 20);
+  if (shortTerm.length < 10) return 0;
+
+  const short_rsi = calculateRSI(shortTerm);
+  const short_trend = shortTerm[shortTerm.length - 1].close > shortTerm[0].close ? 1 : -1;
+
+  const allPrices = simulator.getPriceHistory(pair, 50);
+  const medium_rsi = calculateRSI(allPrices);
+  const medium_trend = allPrices[allPrices.length - 1].close > allPrices[0].close ? 1 : -1;
+
+  return (short_trend === medium_trend ? 0.8 : 0.3) + (Math.abs(short_rsi - medium_rsi) > 20 ? 0.1 : 0);
 }
 
 export function generateSignal() {
@@ -296,17 +367,22 @@ export function generateSignal() {
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
     const { action, confidence } = analyzePattern(pair);
 
-    if (confidence >= 90) {
-      const { start, end } = getNextFiveMinuteInterval();
+    if (confidence >= 85) {
+      const mtf = analyzeMultiTimeframe(pair);
+      const finalConfidence = Math.min(99, Math.round(confidence + (mtf * 5)));
 
-      return {
-        pair,
-        action,
-        confidence,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        session: session.name
-      };
+      if (finalConfidence >= 88) {
+        const { start, end } = getNextFiveMinuteInterval();
+
+        return {
+          pair,
+          action,
+          confidence: finalConfidence,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          session: session.name
+        };
+      }
     }
 
     attempts++;
