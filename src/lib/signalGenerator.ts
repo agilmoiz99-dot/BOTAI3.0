@@ -250,17 +250,26 @@ export function getNextFiveMinuteInterval(): { start: Date; end: Date } {
   const seconds = now.getSeconds();
   const milliseconds = now.getMilliseconds();
 
-  const minutesToAdd = 5 - (minutes % 5);
+  const alignedMinute = Math.ceil(minutes / 5) * 5;
   const nextInterval = new Date(now);
 
-  if (minutesToAdd === 5 && seconds === 0 && milliseconds === 0) {
-    nextInterval.setMinutes(minutes);
+  if (alignedMinute === 60) {
+    nextInterval.setHours(nextInterval.getHours() + 1);
+    nextInterval.setMinutes(0);
   } else {
-    nextInterval.setMinutes(minutes + minutesToAdd);
+    nextInterval.setMinutes(alignedMinute);
   }
 
   nextInterval.setSeconds(0);
   nextInterval.setMilliseconds(0);
+
+  if (seconds === 0 && milliseconds === 0 && minutes % 5 === 0) {
+    nextInterval.setMinutes(minutes + 5);
+    if (nextInterval.getMinutes() === 65) {
+      nextInterval.setHours(nextInterval.getHours() + 1);
+      nextInterval.setMinutes(5);
+    }
+  }
 
   const endInterval = new Date(nextInterval);
   endInterval.setMinutes(nextInterval.getMinutes() + 5);
@@ -431,6 +440,8 @@ export function generateSignal(thresholdOverride?: number) {
     }
   }
 
+  const { start: startTime, end: endTime } = getNextFiveMinuteInterval();
+
   let attempts = 0;
   const maxAttempts = 50;
   let bestSignal = null;
@@ -450,8 +461,8 @@ export function generateSignal(thresholdOverride?: number) {
         pair,
         action,
         confidence: finalConfidence,
-        start_time: new Date().toISOString(),
-        end_time: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
         session: session.name
       };
 
