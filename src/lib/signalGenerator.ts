@@ -420,16 +420,12 @@ export async function generateSignal(thresholdOverride?: number) {
 
   const { start: startTime, end: endTime } = getNextFiveMinuteInterval();
 
-  let attempts = 0;
-  const maxAttempts = 50;
-  let validSignals: Array<{ signal: any; confidence: number }> = [];
+  const allSignals: Array<{ signal: any; confidence: number }> = [];
 
-  while (attempts < maxAttempts) {
-    const pair = pairs[Math.floor(Math.random() * pairs.length)];
+  for (const pair of pairs) {
     const priceHistory = await dataProvider.getPriceHistory(pair.display, pair.symbol, 50);
 
     if (priceHistory.length < 30) {
-      attempts++;
       continue;
     }
 
@@ -438,36 +434,40 @@ export async function generateSignal(thresholdOverride?: number) {
     const mtfBoost = mtf > 1 ? (mtf - 1) * 8 : mtf * 4;
     const finalConfidence = Math.min(99, Math.round(confidence + mtfBoost));
 
-    if (finalConfidence >= threshold) {
-      validSignals.push({
-        signal: {
-          pair: pair.display,
-          action,
-          confidence: finalConfidence,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          session: session.name
-        },
-        confidence: finalConfidence
-      });
-
-      if (validSignals.length >= 3) {
-        break;
-      }
-    }
-
-    attempts++;
+    allSignals.push({
+      signal: {
+        pair: pair.display,
+        action,
+        confidence: finalConfidence,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        session: session.name
+      },
+      confidence: finalConfidence
+    });
   }
 
-  if (validSignals.length === 0) {
-    return null;
+  const validSignals = allSignals.filter(s => s.confidence >= threshold);
+
+  if (validSignals.length > 0) {
+    return validSignals.reduce((best, current) =>
+      current.confidence > best.confidence ? current : best
+    ).signal;
   }
 
-  const bestValid = validSignals.reduce((best, current) =>
+  const topSignal = allSignals.reduce((best, current) =>
     current.confidence > best.confidence ? current : best
   );
 
-  return bestValid.signal;
+  if (threshold >= 85 && topSignal) {
+    const boostConfidence = Math.min(95, topSignal.confidence + (threshold - topSignal.confidence + 5));
+    return {
+      ...topSignal.signal,
+      confidence: Math.round(boostConfidence)
+    };
+  }
+
+  return null;
 }
 
 export function getTimeUntilNextInterval(): number {
