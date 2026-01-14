@@ -362,33 +362,36 @@ export function generateSignal() {
 
   let attempts = 0;
   const maxAttempts = 20;
+  let bestSignal = null;
+  let bestConfidence = 0;
 
   while (attempts < maxAttempts) {
     const pair = pairs[Math.floor(Math.random() * pairs.length)];
     const { action, confidence } = analyzePattern(pair);
 
-    if (confidence >= 85) {
+    if (confidence > bestConfidence) {
+      bestConfidence = confidence;
       const mtf = analyzeMultiTimeframe(pair);
       const finalConfidence = Math.min(99, Math.round(confidence + (mtf * 5)));
 
-      if (finalConfidence >= 88) {
-        const { start, end } = getNextFiveMinuteInterval();
+      bestSignal = {
+        pair,
+        action,
+        confidence: finalConfidence,
+        start_time: new Date().toISOString(),
+        end_time: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        session: session.name
+      };
 
-        return {
-          pair,
-          action,
-          confidence: finalConfidence,
-          start_time: start.toISOString(),
-          end_time: end.toISOString(),
-          session: session.name
-        };
+      if (finalConfidence >= 75) {
+        return bestSignal;
       }
     }
 
     attempts++;
   }
 
-  return null;
+  return bestSignal;
 }
 
 export function getTimeUntilNextInterval(): number {
