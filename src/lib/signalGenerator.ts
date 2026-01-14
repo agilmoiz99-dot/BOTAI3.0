@@ -207,13 +207,21 @@ export function getCurrentSession(): MarketSession {
   const now = new Date();
   const hour = now.getUTCHours();
 
+  let selectedPairs: { symbol: string; display: string }[];
+
   if (hour >= 0 && hour < 8) {
-    return { name: 'Asian', active: true, pairs: CURRENCY_PAIRS.Asian };
+    selectedPairs = CURRENCY_PAIRS.Asian;
   } else if (hour >= 8 && hour < 16) {
-    return { name: 'London', active: true, pairs: CURRENCY_PAIRS.London };
+    selectedPairs = CURRENCY_PAIRS.London;
   } else {
-    return { name: 'New York', active: true, pairs: CURRENCY_PAIRS['New York'] };
+    selectedPairs = CURRENCY_PAIRS['New York'];
   }
+
+  return {
+    name: selectedPairs === CURRENCY_PAIRS.Asian ? 'Asian' : selectedPairs === CURRENCY_PAIRS.London ? 'London' : 'New York',
+    active: true,
+    pairs: selectedPairs.map(p => p.display)
+  };
 }
 
 export function getNextFiveMinuteInterval(): { start: Date; end: Date } {
