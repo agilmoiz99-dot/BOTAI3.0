@@ -420,13 +420,11 @@ export async function generateSignal(thresholdOverride?: number) {
 
   const { start: startTime, end: endTime } = getNextFiveMinuteInterval();
 
-  const allSignals: Array<{ signal: any; confidence: number }> = [];
-
-  for (const pair of pairs) {
+  const analysisPromises = pairs.map(async (pair) => {
     const priceHistory = await dataProvider.getPriceHistory(pair.display, pair.symbol, 50);
 
     if (priceHistory.length < 30) {
-      continue;
+      return null;
     }
 
     const { action, confidence } = await analyzePattern(pair);
@@ -434,7 +432,7 @@ export async function generateSignal(thresholdOverride?: number) {
     const mtfBoost = mtf > 1 ? (mtf - 1) * 8 : mtf * 4;
     const finalConfidence = Math.min(99, Math.round(confidence + mtfBoost));
 
-    allSignals.push({
+    return {
       signal: {
         pair: pair.display,
         action,
@@ -444,8 +442,11 @@ export async function generateSignal(thresholdOverride?: number) {
         session: session.name
       },
       confidence: finalConfidence
-    });
-  }
+    };
+  });
+
+  const results = await Promise.all(analysisPromises);
+  const allSignals = results.filter((s) => s !== null) as Array<{ signal: any; confidence: number }>;
 
   const validSignals = allSignals.filter(s => s.confidence >= threshold);
 
