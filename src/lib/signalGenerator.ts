@@ -203,6 +203,75 @@ function detectSupportResistance(prices: PriceData[]): { support: number; resist
   return { support, resistance };
 }
 
+function calculateWilliamsR(prices: PriceData[], period: number = 14): number {
+  const recent = prices.slice(-period);
+  let high = recent[0].high, low = recent[0].low;
+
+  for (let i = 1; i < recent.length; i++) {
+    if (recent[i].high > high) high = recent[i].high;
+    if (recent[i].low < low) low = recent[i].low;
+  }
+
+  const current = recent[recent.length - 1].close;
+  return high === low ? -50 : (((current - high) / (high - low)) * -100);
+}
+
+function calculateCCI(prices: PriceData[], period: number = 14): number {
+  const recent = prices.slice(-period);
+  const typicalPrices = recent.map(p => (p.high + p.low + p.close) / 3);
+  const sma = typicalPrices.reduce((a, b) => a + b) / period;
+  const deviation = typicalPrices.reduce((sum, val) => sum + Math.abs(val - sma), 0) / period;
+
+  return deviation === 0 ? 0 : (typicalPrices[typicalPrices.length - 1] - sma) / (0.015 * deviation);
+}
+
+function calculateADX(prices: PriceData[], period: number = 14): number {
+  let plusDM = 0, minusDM = 0;
+
+  for (let i = 1; i < Math.min(period + 1, prices.length); i++) {
+    const upMove = prices[i].high - prices[i - 1].high;
+    const downMove = prices[i - 1].low - prices[i].low;
+
+    if (upMove > downMove && upMove > 0) plusDM += upMove;
+    if (downMove > upMove && downMove > 0) minusDM += downMove;
+  }
+
+  const tr = calculateATR(prices, period) * period;
+  if (tr === 0) return 0;
+
+  const plusDI = (plusDM / tr) * 100;
+  const minusDI = (minusDM / tr) * 100;
+  const diDiff = Math.abs(plusDI - minusDI);
+  const diSum = plusDI + minusDI || 1;
+
+  return (diDiff / diSum) * 100;
+}
+
+function calculateOBV(prices: PriceData[]): number {
+  let obv = 0;
+  for (let i = 0; i < prices.length; i++) {
+    if (i === 0) {
+      obv = 0;
+    } else {
+      if (prices[i].close > prices[i - 1].close) obv += (prices[i].high - prices[i].low);
+      else if (prices[i].close < prices[i - 1].close) obv -= (prices[i].high - prices[i].low);
+    }
+  }
+  return obv;
+}
+
+function calculateFibonacciLevels(prices: PriceData[]): { level_236: number; level_382: number; level_618: number } {
+  const highPrice = Math.max(...prices.map(p => p.high));
+  const lowPrice = Math.min(...prices.map(p => p.low));
+  const diff = highPrice - lowPrice;
+
+  return {
+    level_236: highPrice - diff * 0.236,
+    level_382: highPrice - diff * 0.382,
+    level_618: highPrice - diff * 0.618
+  };
+}
+
 export function getCurrentSession(): MarketSession {
   const now = new Date();
   const hour = now.getUTCHours();
@@ -270,6 +339,11 @@ export async function analyzePattern(pair: { symbol: string; display: string }):
   const { upper, middle, lower } = calculateBollingerBands(priceHistory);
   const atr = calculateATR(priceHistory);
   const { support, resistance } = detectSupportResistance(priceHistory);
+  const williamsR = calculateWilliamsR(priceHistory);
+  const cci = calculateCCI(priceHistory);
+  const adx = calculateADX(priceHistory);
+  const obv = calculateOBV(priceHistory);
+  const fibonacci = calculateFibonacciLevels(priceHistory);
 
   const currentPrice = priceHistory[priceHistory.length - 1].close;
   const lastPrice = priceHistory[priceHistory.length - 2].close;
@@ -357,12 +431,46 @@ export async function analyzePattern(pair: { symbol: string; display: string }):
   if (priceChange < -0.08 && rsi > 30) bearishSignals += 1.5;
   totalSignals += 1.5;
 
+  // Williams %R (momentum reversal indicator)
+  if (williamsR < -80) bullishSignals += 2;
+  else if (williamsR < -50) bullishSignals += 1;
+  else if (williamsR > -20) bearishSignals += 2;
+  else if (williamsR > -50) bearishSignals += 1;
+  totalSignals += 2;
+
+  // CCI (Commodity Channel Index) - cyclical movements
+  if (cci < -100) bullishSignals += 1.8;
+  else if (cci < -50) bullishSignals += 1;
+  else if (cci > 100) bearishSignals += 1.8;
+  else if (cci > 50) bearishSignals += 1;
+  totalSignals += 1.8;
+
+  // ADX (Average Directional Index) - trend strength
+  if (adx > 25) {
+    if (bullishSignals > bearishSignals) bullishSignals += 2.5;
+    else bearishSignals += 2.5;
+  } else if (adx > 20) {
+    if (bullishSignals > bearishSignals) bullishSignals += 1.5;
+    else bearishSignals += 1.5;
+  }
+  totalSignals += 2.5;
+
+  // OBV trend confirmation
+  if (obv > 0 && bullishSignals > bearishSignals) bullishSignals += 1.5;
+  else if (obv < 0 && bearishSignals > bullishSignals) bearishSignals += 1.5;
+  totalSignals += 1.5;
+
+  // Fibonacci level proximity
+  if (currentPrice < fibonacci.level_236 && currentPrice > support) bullishSignals += 1.5;
+  else if (currentPrice > fibonacci.level_618 && currentPrice < resistance) bearishSignals += 1.5;
+  totalSignals += 1.5;
+
   const bullishPercentage = (bullishSignals / totalSignals) * 100;
   const action = bullishSignals > bearishSignals ? 'BUY' : 'SELL';
 
   const confirmationStrength = Math.abs(bullishSignals - bearishSignals);
   const baseConfidence = bullishPercentage;
-  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 8.5);
+  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 9.2);
 
   return { action, confidence: Math.min(99, Math.max(88, confidence)) };
 }
