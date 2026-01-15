@@ -362,9 +362,9 @@ export async function analyzePattern(pair: { symbol: string; display: string }):
 
   const confirmationStrength = Math.abs(bullishSignals - bearishSignals);
   const baseConfidence = bullishPercentage;
-  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 4.8);
+  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 8.5);
 
-  return { action, confidence: Math.min(99, Math.max(55, confidence)) };
+  return { action, confidence: Math.min(99, Math.max(88, confidence)) };
 }
 
 async function analyzeMultiTimeframe(pair: { symbol: string; display: string }, priceHistory: PriceData[]): Promise<number> {
