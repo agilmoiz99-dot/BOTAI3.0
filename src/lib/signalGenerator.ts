@@ -362,9 +362,9 @@ export async function analyzePattern(pair: { symbol: string; display: string }):
 
   const confirmationStrength = Math.abs(bullishSignals - bearishSignals);
   const baseConfidence = bullishPercentage;
-  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 3.5);
+  const confidence = Math.round((baseConfidence * (confirmationStrength / totalSignals)) * 4.8);
 
-  return { action, confidence: Math.min(99, Math.max(45, confidence)) };
+  return { action, confidence: Math.min(99, Math.max(55, confidence)) };
 }
 
 async function analyzeMultiTimeframe(pair: { symbol: string; display: string }, priceHistory: PriceData[]): Promise<number> {
@@ -456,16 +456,11 @@ export async function generateSignal(thresholdOverride?: number) {
     ).signal;
   }
 
-  const topSignal = allSignals.reduce((best, current) =>
-    current.confidence > best.confidence ? current : best
-  );
-
-  if (threshold >= 85 && topSignal) {
-    const boostConfidence = Math.min(95, topSignal.confidence + (threshold - topSignal.confidence + 5));
-    return {
-      ...topSignal.signal,
-      confidence: Math.round(boostConfidence)
-    };
+  if (allSignals.length > 0) {
+    const topSignal = allSignals.reduce((best, current) =>
+      current.confidence > best.confidence ? current : best
+    );
+    return topSignal.signal;
   }
 
   return null;
